@@ -23,6 +23,7 @@ public class PanelRegistroAlojamiento extends JPanel {
     private final JPanel panelExtra;
     private final JTextField campoCategoria;
     private final JTextField campoOrganizador;
+    private final JTextField campoResponsable;
     private final JLabel etiquetaExtra;
 
     public PanelRegistroAlojamiento(VentanaPrincipal ventana) {
@@ -40,6 +41,7 @@ public class PanelRegistroAlojamiento extends JPanel {
 
         campoCategoria = new JTextField(8);
         campoOrganizador = new JTextField(16);
+        campoResponsable = new JTextField(16);
         etiquetaExtra = new JLabel();
 
         panelExtra = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -79,6 +81,10 @@ public class PanelRegistroAlojamiento extends JPanel {
             etiquetaExtra.setText("Organizador:");
             panelExtra.add(etiquetaExtra);
             panelExtra.add(campoOrganizador);
+        } else {
+            etiquetaExtra.setText("Responsable:");
+            panelExtra.add(etiquetaExtra);
+            panelExtra.add(campoResponsable);
         }
         panelExtra.revalidate();
         panelExtra.repaint();
@@ -102,18 +108,22 @@ public class PanelRegistroAlojamiento extends JPanel {
             String tipo = (String) comboTipo.getSelectedItem();
             switch (tipo) {
                 case "PARROQUIA":
-                    alojamiento = new Parroquia(0, nombreUsuario, clave, nombre, ciudad, direccion, capacidad);
+                    String responsable = campoResponsable.getText().trim();
+                    if (responsable.isEmpty()) {
+                        throw new IllegalArgumentException("El responsable es obligatorio.");
+                    }
+                    alojamiento = new Parroquia(nombreUsuario, clave, nombre, ciudad, direccion, capacidad, responsable);
                     break;
                 case "HOTEL":
                     int categoria = Integer.parseInt(campoCategoria.getText().trim());
-                    alojamiento = new Hotel(0, nombreUsuario, clave, nombre, ciudad, direccion, capacidad, categoria);
+                    alojamiento = new Hotel(nombreUsuario, clave, nombre, ciudad, direccion, capacidad, categoria);
                     break;
                 case "ESPACIO_ORG":
                     String organizador = campoOrganizador.getText().trim();
                     if (organizador.isEmpty()) {
                         throw new IllegalArgumentException("El organizador es obligatorio.");
                     }
-                    alojamiento = new EspacioOrg(0, nombreUsuario, clave, nombre, ciudad, direccion, capacidad, organizador);
+                    alojamiento = new EspacioOrg(nombreUsuario, clave, nombre, ciudad, direccion, capacidad, organizador);
                     break;
                 default:
                     throw new IllegalArgumentException("Tipo de alojamiento invalido.");

@@ -17,6 +17,10 @@ import java.util.Map;
  * Se encarga de cargar y guardar los tres archivos JSON de la aplicacion.
  * La escritura se realiza con StringBuilder y la lectura con el ParserJSON propio.
  *
+ * El modelo usa referencias directas entre objetos (el UML no modela ids), por
+ * lo que en los archivos JSON las cuentas se referencian por nombre de usuario
+ * (unico) y los eventos inscritos se guardan con sus datos completos.
+ *
  * NOTA: las claves se guardan en texto plano exclusivamente por la limitacion
  * academica del TPO. Esto no es una practica segura para produccion.
  */
@@ -38,14 +42,17 @@ public class PersistenciaJSON {
     // CUENTAS                                                             //
     // ------------------------------------------------------------------ //
 
-    public List<Usuario> cargarCuentas() throws IOException {
+    /**
+     * Carga las cuentas y resuelve las referencias a los eventos ya cargados.
+     */
+    public List<Usuario> cargarCuentas(List<Evento> eventos) throws IOException {
         Object raiz = parsearArchivo("cuentas.json");
         if (!(raiz instanceof List)) {
             throw new IOException("Formato invalido en cuentas.json: se esperaba un arreglo.");
         }
         List<Usuario> cuentas = new ArrayList<>();
         for (Object elemento : (List<?>) raiz) {
-            cuentas.add(construirUsuario((Map<String, Object>) elemento));
+            cuentas.add(construirUsuario((Map<String, Object>) elemento, eventos));
         }
         return cuentas;
     }
@@ -84,13 +91,7 @@ public class PersistenciaJSON {
         StringBuilder sb = new StringBuilder();
         sb.append("[\n");
         for (int i = 0; i < eventos.size(); i++) {
-            Evento e = eventos.get(i);
-            sb.append("  { \"id\": ").append(e.getId());
-            sb.append(", \"fecha\": ").append(jsonCadena(e.getFecha().toString()));
-            sb.append(", \"horario\": ").append(jsonCadena(e.getHorario().toString()));
-            sb.append(", \"actividad\": ").append(jsonCadena(e.getActividad()));
-            sb.append(", \"ciudad\": ").append(jsonCadena(e.getCiudad().name()));
-            sb.append(" }");
+            sb.append("  ").append(eventoJson(eventos.get(i)));
             if (i < eventos.size() - 1) {
                 sb.append(",");
             }
@@ -104,33 +105,62 @@ public class PersistenciaJSON {
     // RESERVAS                                                            //
     // ------------------------------------------------------------------ //
 
-    public List<Reserva> cargarReservas() throws IOException {
+    /**
+     * Carga las reservas y las adjunta a la coleccion del alojamiento que
+     * corresponde. Las cuentas se referencian por nombre de usuario.
+     */
+    public List<Reserva> cargarReservas(List<Usuario> usuarios) throws IOException {
         Object raiz = parsearArchivo("reservas.json");
         if (!(raiz instanceof List)) {
             throw new IOException("Formato invalido en reservas.json: se esperaba un arreglo.");
         }
         List<Reserva> reservas = new ArrayList<>();
         for (Object elemento : (List<?>) raiz) {
-            reservas.add(construirReserva((Map<String, Object>) elemento));
+            Map<String, Object> m = (Map<String, Object>) elemento;
+            String nombreAsistente = (String) m.get("asistente");
+            String nombreAlojamiento = (String) m.get("alojamiento");
+            Asistente asistente = buscarAsistente(usuarios, nombreAsistente);
+            Alojamiento alojamiento = buscarAlojamiento(usuarios, nombreAlojamiento);
+            if (asistente == null) {
+                throw new IOException("reservas.json referencia a un asistente inexistente: " + nombreAsistente);
+            }
+            if (alojamiento == null) {
+                throw new IOException("reservas.json referencia a un alojamiento inexistente: " + nombreAlojamiento);
+            }
+            Reserva reserva = new Reserva(asistente,
+                    LocalDate.parse((String) m.get("ingreso")),
+                    LocalDate.parse((String) m.get("egreso")),
+                    EstadoReserva.valueOf((String) m.get("estado")));
+            alojamiento.getReservas().add(reserva);
+            reservas.add(reserva);
         }
         return reservas;
     }
 
-    public void guardarReservas(List<Reserva> reservas) throws IOException {
+    /**
+     * Guarda todas las reservas de todos los alojamientos. El nombre del
+     * alojamiento se obtiene de la coleccion que las contiene, porque la
+     * asociacion es navegable desde Alojamiento hacia Reserva.
+     */
+    public void guardarReservas(List<Alojamiento> alojamientos) throws IOException {
         StringBuilder sb = new StringBuilder();
         sb.append("[\n");
-        for (int i = 0; i < reservas.size(); i++) {
-            Reserva r = reservas.get(i);
-            sb.append("  { \"id\": ").append(r.getId());
-            sb.append(", \"idAsistente\": ").append(r.getIdAsistente());
-            sb.append(", \"idAlojamiento\": ").append(r.getIdAlojamiento());
-            sb.append(", \"ingreso\": ").append(jsonCadena(r.getIngreso().toString()));
-            sb.append(", \"egreso\": ").append(jsonCadena(r.getEgreso().toString()));
-            sb.append(", \"estado\": ").append(jsonCadena(r.getEstado().name()));
-            sb.append(" }");
-            if (i < reservas.size() - 1) {
-                sb.append(",");
+        boolean primero = true;
+        for (Alojamiento alojamiento : alojamientos) {
+            for (Reserva r : alojamiento.getReservas()) {
+                if (!primero) {
+                    sb.append(",\n");
+                }
+                primero = false;
+                sb.append("  { \"asistente\": ").append(jsonCadena(r.getAsistente().getNombreUsuario()));
+                sb.append(", \"alojamiento\": ").append(jsonCadena(alojamiento.getNombreUsuario()));
+                sb.append(", \"ingreso\": ").append(jsonCadena(r.getIngreso().toString()));
+                sb.append(", \"egreso\": ").append(jsonCadena(r.getEgreso().toString()));
+                sb.append(", \"estado\": ").append(jsonCadena(r.getEstado().name()));
+                sb.append(" }");
             }
+        }
+        if (!primero) {
             sb.append("\n");
         }
         sb.append("]\n");
@@ -141,38 +171,42 @@ public class PersistenciaJSON {
     // CONSTRUCCION DE OBJETOS DESDE JSON                                  //
     // ------------------------------------------------------------------ //
 
-    private Usuario construirUsuario(Map<String, Object> m) throws IOException {
+    private Usuario construirUsuario(Map<String, Object> m, List<Evento> eventos) throws IOException {
         String tipo = (String) m.get("tipo");
-        int id = numero(m.get("id")).intValue();
         String nombreUsuario = (String) m.get("nombreUsuario");
         String clave = (String) m.get("clave");
         String nombre = (String) m.get("nombre");
 
         switch (tipo) {
             case "ADMINISTRADOR":
-                return new Administrador(id, nombreUsuario, clave, nombre);
+                return new Administrador(nombreUsuario, clave, nombre);
             case "ASISTENTE": {
                 String dni = (String) m.get("dni");
                 Ciudad origen = Ciudad.valueOf((String) m.get("origen"));
-                Asistente asistente = new Asistente(id, nombreUsuario, clave, nombre, dni, origen);
-                Object eventos = m.get("eventos");
-                if (eventos instanceof List) {
-                    for (Object idEvento : (List<?>) eventos) {
-                        asistente.inscribir(numero(idEvento).intValue());
+                Asistente asistente = new Asistente(nombreUsuario, clave, nombre, dni, origen);
+                Object inscripciones = m.get("eventos");
+                if (inscripciones instanceof List) {
+                    for (Object item : (List<?>) inscripciones) {
+                        Map<String, Object> datosEvento = (Map<String, Object>) item;
+                        Evento evento = buscarEvento(eventos, datosEvento);
+                        if (evento == null) {
+                            throw new IOException("cuentas.json referencia a un evento inexistente: "
+                                    + datosEvento.get("fecha") + " " + datosEvento.get("horario")
+                                    + " " + datosEvento.get("actividad"));
+                        }
+                        asistente.inscribir(evento);
                     }
                 }
                 return asistente;
             }
             case "PARROQUIA":
-                return new Parroquia(id, nombreUsuario, clave, nombre,
-                        ciudad(m), direccion(m), capacidad(m));
+                return new Parroquia(nombreUsuario, clave, nombre, ciudad(m), direccion(m), capacidad(m),
+                        texto(m.get("responsable")));
             case "HOTEL":
-                return new Hotel(id, nombreUsuario, clave, nombre,
-                        ciudad(m), direccion(m), capacidad(m),
+                return new Hotel(nombreUsuario, clave, nombre, ciudad(m), direccion(m), capacidad(m),
                         numero(m.get("categoria")).intValue());
             case "ESPACIO_ORG":
-                return new EspacioOrg(id, nombreUsuario, clave, nombre,
-                        ciudad(m), direccion(m), capacidad(m),
+                return new EspacioOrg(nombreUsuario, clave, nombre, ciudad(m), direccion(m), capacidad(m),
                         (String) m.get("organizador"));
             default:
                 throw new IOException("Tipo de cuenta desconocido en cuentas.json: " + tipo);
@@ -180,22 +214,43 @@ public class PersistenciaJSON {
     }
 
     private Evento construirEvento(Map<String, Object> m) throws IOException {
-        int id = numero(m.get("id")).intValue();
-        LocalDate fecha = LocalDate.parse((String) m.get("fecha"));
-        LocalTime horario = LocalTime.parse((String) m.get("horario"));
-        String actividad = (String) m.get("actividad");
-        Ciudad ciudad = Ciudad.valueOf((String) m.get("ciudad"));
-        return new Evento(id, fecha, horario, actividad, ciudad);
+        return new Evento(
+                LocalDate.parse((String) m.get("fecha")),
+                LocalTime.parse((String) m.get("horario")),
+                (String) m.get("actividad"),
+                Ciudad.valueOf((String) m.get("ciudad")));
     }
 
-    private Reserva construirReserva(Map<String, Object> m) throws IOException {
-        int id = numero(m.get("id")).intValue();
-        int idAsistente = numero(m.get("idAsistente")).intValue();
-        int idAlojamiento = numero(m.get("idAlojamiento")).intValue();
-        LocalDate ingreso = LocalDate.parse((String) m.get("ingreso"));
-        LocalDate egreso = LocalDate.parse((String) m.get("egreso"));
-        EstadoReserva estado = EstadoReserva.valueOf((String) m.get("estado"));
-        return new Reserva(id, idAsistente, idAlojamiento, ingreso, egreso, estado);
+    private Evento buscarEvento(List<Evento> eventos, Map<String, Object> datos) throws IOException {
+        LocalDate fecha = LocalDate.parse((String) datos.get("fecha"));
+        LocalTime horario = LocalTime.parse((String) datos.get("horario"));
+        String actividad = (String) datos.get("actividad");
+        Ciudad ciudad = Ciudad.valueOf((String) datos.get("ciudad"));
+        for (Evento e : eventos) {
+            if (e.getFecha().equals(fecha) && e.getHorario().equals(horario)
+                    && e.getActividad().equals(actividad) && e.getCiudad() == ciudad) {
+                return e;
+            }
+        }
+        return null;
+    }
+
+    private Asistente buscarAsistente(List<Usuario> usuarios, String nombreUsuario) {
+        for (Usuario u : usuarios) {
+            if (u instanceof Asistente && u.getNombreUsuario().equals(nombreUsuario)) {
+                return (Asistente) u;
+            }
+        }
+        return null;
+    }
+
+    private Alojamiento buscarAlojamiento(List<Usuario> usuarios, String nombreUsuario) {
+        for (Usuario u : usuarios) {
+            if (u instanceof Alojamiento && u.getNombreUsuario().equals(nombreUsuario)) {
+                return (Alojamiento) u;
+            }
+        }
+        return null;
     }
 
     // ------------------------------------------------------------------ //
@@ -206,7 +261,6 @@ public class PersistenciaJSON {
         StringBuilder sb = new StringBuilder();
         sb.append("  { ");
         sb.append("\"tipo\": ").append(jsonCadena(tipoUsuario(u)));
-        sb.append(", \"id\": ").append(u.getId());
         sb.append(", \"nombreUsuario\": ").append(jsonCadena(u.getNombreUsuario()));
         sb.append(", \"clave\": ").append(jsonCadena(u.getClave()));
         sb.append(", \"nombre\": ").append(jsonCadena(u.getNombre()));
@@ -216,12 +270,12 @@ public class PersistenciaJSON {
             sb.append(", \"dni\": ").append(jsonCadena(a.getDni()));
             sb.append(", \"origen\": ").append(jsonCadena(a.getOrigen().name()));
             sb.append(", \"eventos\": [");
-            List<Integer> eventos = a.getEventos();
+            List<Evento> eventos = a.getEventos();
             for (int i = 0; i < eventos.size(); i++) {
                 if (i > 0) {
                     sb.append(", ");
                 }
-                sb.append(eventos.get(i));
+                sb.append(eventoJson(eventos.get(i)));
             }
             sb.append("]");
         } else if (u instanceof Alojamiento) {
@@ -229,7 +283,9 @@ public class PersistenciaJSON {
             sb.append(", \"ciudad\": ").append(jsonCadena(al.getCiudad().name()));
             sb.append(", \"direccion\": ").append(jsonCadena(al.getDireccion()));
             sb.append(", \"capacidad\": ").append(al.getCapacidad());
-            if (al instanceof Hotel) {
+            if (al instanceof Parroquia) {
+                sb.append(", \"responsable\": ").append(jsonCadena(((Parroquia) al).getResponsable()));
+            } else if (al instanceof Hotel) {
                 sb.append(", \"categoria\": ").append(((Hotel) al).getCategoria());
             } else if (al instanceof EspacioOrg) {
                 sb.append(", \"organizador\": ").append(jsonCadena(((EspacioOrg) al).getOrganizador()));
@@ -237,6 +293,14 @@ public class PersistenciaJSON {
         }
         sb.append(" }");
         return sb.toString();
+    }
+
+    /** Serializa un evento con todos sus datos (no tiene id en el modelo). */
+    private String eventoJson(Evento e) {
+        return "{ \"fecha\": " + jsonCadena(e.getFecha().toString())
+                + ", \"horario\": " + jsonCadena(e.getHorario().toString())
+                + ", \"actividad\": " + jsonCadena(e.getActividad())
+                + ", \"ciudad\": " + jsonCadena(e.getCiudad().name()) + " }";
     }
 
     private String tipoUsuario(Usuario u) {
@@ -272,6 +336,11 @@ public class PersistenciaJSON {
 
     private int capacidad(Map<String, Object> m) throws IOException {
         return numero(m.get("capacidad")).intValue();
+    }
+
+    /** Devuelve el texto indicado o una cadena vacia si el campo no existe. */
+    private String texto(Object valor) {
+        return valor == null ? "" : (String) valor;
     }
 
     private Number numero(Object valor) throws IOException {

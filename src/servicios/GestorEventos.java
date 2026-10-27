@@ -12,7 +12,8 @@ import java.util.List;
 
 /**
  * Gestiona el alta, la modificacion y la consulta de eventos, asi como la
- * inscripcion y desinscripcion de asistentes.
+ * inscripcion y desinscripcion de asistentes. Es el extremo navegable de la
+ * asociacion con Evento: mantiene la coleccion de eventos.
  */
 public class GestorEventos {
 
@@ -31,48 +32,31 @@ public class GestorEventos {
         return eventos;
     }
 
-    public boolean existeId(int id) {
-        return buscarPorId(id) != null;
-    }
-
-    public Evento buscarPorId(int id) {
-        for (Evento e : eventos) {
-            if (e.getId() == id) {
-                return e;
-            }
-        }
-        return null;
-    }
-
     /**
-     * Registra un evento nuevo. Valida que el id no se repita y guarda en disco.
+     * Registra un evento nuevo y guarda en disco.
      */
-    public Evento registrarEvento(Evento evento) {
-        if (existeId(evento.getId())) {
-            throw new IllegalArgumentException("Ya existe un evento con ese identificador.");
-        }
+    public void registrar(LocalDate fecha, LocalTime horario, String actividad, Ciudad ciudad) {
+        Evento evento = new Evento(fecha, horario, actividad, ciudad);
         eventos.add(evento);
         guardarEventos();
-        return evento;
     }
 
     /**
-     * Modifica un evento conservando su identificador.
+     * Modifica un evento existente conservando su identidad.
      */
-    public void modificarEvento(int id, LocalDate fecha, LocalTime horario,
+    public void modificarEvento(Evento evento, LocalDate fecha, LocalTime horario,
                                 String actividad, Ciudad ciudad) {
-        Evento evento = buscarPorId(id);
-        if (evento == null) {
-            throw new IllegalArgumentException("No existe un evento con id " + id + ".");
-        }
-        if (actividad == null || actividad.trim().isEmpty()) {
-            throw new IllegalArgumentException("La actividad no puede estar vacia.");
+        if (evento == null || !eventos.contains(evento)) {
+            throw new IllegalArgumentException("El evento indicado no existe.");
         }
         evento.setFecha(fecha);
         evento.setHorario(horario);
         evento.setActividad(actividad);
         evento.setCiudad(ciudad);
         guardarEventos();
+        // Las cuentas guardan los datos de los eventos en los que estan
+        // inscriptas, por lo que hay que reescribirlas si el evento cambio.
+        guardarCuentas();
     }
 
     public List<Evento> listarTodosOrdenados() {
@@ -81,7 +65,10 @@ public class GestorEventos {
         return copia;
     }
 
-    public List<Evento> listarPorFecha(LocalDate fecha) {
+    /**
+     * Devuelve los eventos de una fecha, ordenados por horario.
+     */
+    public List<Evento> agendaPorFecha(LocalDate fecha) {
         List<Evento> resultado = new ArrayList<>();
         for (Evento e : eventos) {
             if (e.getFecha().equals(fecha)) {
@@ -95,25 +82,25 @@ public class GestorEventos {
     /**
      * Inscribe a un asistente en un evento existente.
      */
-    public void inscribir(Asistente asistente, int idEvento) {
-        if (!existeId(idEvento)) {
-            throw new IllegalArgumentException("No existe un evento con id " + idEvento + ".");
+    public void inscribir(Asistente asistente, Evento evento) {
+        if (evento == null || !eventos.contains(evento)) {
+            throw new IllegalArgumentException("El evento indicado no existe.");
         }
-        if (asistente.estaInscrito(idEvento)) {
+        if (asistente.estaInscrito(evento)) {
             throw new IllegalArgumentException("Ya estas inscrito en ese evento.");
         }
-        asistente.inscribir(idEvento);
+        asistente.inscribir(evento);
         guardarCuentas();
     }
 
     /**
      * Desinscribe a un asistente de un evento.
      */
-    public void desinscribir(Asistente asistente, int idEvento) {
-        if (!asistente.estaInscrito(idEvento)) {
+    public void desinscribir(Asistente asistente, Evento evento) {
+        if (!asistente.estaInscrito(evento)) {
             throw new IllegalArgumentException("No estas inscrito en ese evento.");
         }
-        asistente.desinscribir(idEvento);
+        asistente.desinscribir(evento);
         guardarCuentas();
     }
 

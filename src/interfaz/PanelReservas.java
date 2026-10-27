@@ -82,11 +82,11 @@ public class PanelReservas extends JPanel {
     }
 
     private void actualizarReservaActual() {
-        Reserva reserva = ventana.getGestorReservas().reservaActivaDe(asistente().getId());
+        Reserva reserva = ventana.getGestorReservas().reservaActivaDe(asistente());
         if (reserva == null) {
             etiquetaReservaActual.setText("No tenes ninguna reserva activa.");
         } else {
-            Alojamiento alojamiento = ventana.getGestorUsuarios().buscarAlojamiento(reserva.getIdAlojamiento());
+            Alojamiento alojamiento = ventana.getGestorReservas().alojamientoDe(reserva);
             etiquetaReservaActual.setText("Reserva activa: " + alojamiento.getNombre()
                     + " del " + reserva.getIngreso() + " al " + reserva.getEgreso() + ".");
         }
@@ -114,7 +114,7 @@ public class PanelReservas extends JPanel {
                 throw new IllegalArgumentException("El egreso debe ser posterior al ingreso.");
             }
             int disponibles = ventana.getGestorReservas().disponibilidad(
-                    alojamiento.getId(), ingreso, egreso);
+                    alojamiento, ingreso, egreso);
             etiquetaDisponibilidad.setText("Disponibilidad para todo el periodo: "
                     + disponibles + " de " + alojamiento.getCapacidad() + " plazas.");
         } catch (Exception ex) {
@@ -132,7 +132,7 @@ public class PanelReservas extends JPanel {
             LocalDate ingreso = UtilidadesInterfaz.leerFecha(campoIngreso.getText());
             LocalDate egreso = UtilidadesInterfaz.leerFecha(campoEgreso.getText());
 
-            ventana.getGestorReservas().crearReserva(asistente().getId(), alojamiento.getId(), ingreso, egreso);
+            ventana.getGestorReservas().crearReserva(asistente(), alojamiento, ingreso, egreso);
             UtilidadesInterfaz.mostrarInfo(this, "Reserva confirmada en " + alojamiento.getNombre() + ".");
             actualizarReservaActual();
             etiquetaDisponibilidad.setText(" ");
@@ -142,7 +142,7 @@ public class PanelReservas extends JPanel {
     }
 
     private void cancelarReserva() {
-        Reserva reserva = ventana.getGestorReservas().reservaActivaDe(asistente().getId());
+        Reserva reserva = ventana.getGestorReservas().reservaActivaDe(asistente());
         if (reserva == null) {
             UtilidadesInterfaz.mostrarError(this, "No tenes ninguna reserva activa.");
             return;
@@ -151,7 +151,7 @@ public class PanelReservas extends JPanel {
             return;
         }
         try {
-            ventana.getGestorReservas().cancelarReserva(reserva.getId());
+            ventana.getGestorReservas().cancelarReserva(asistente());
             UtilidadesInterfaz.mostrarInfo(this, "Reserva cancelada.");
             actualizarReservaActual();
         } catch (Exception ex) {

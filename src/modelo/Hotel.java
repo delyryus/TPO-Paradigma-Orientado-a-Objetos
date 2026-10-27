@@ -11,9 +11,9 @@ public class Hotel extends Alojamiento {
 
     private int categoria;
 
-    public Hotel(int id, String nombreUsuario, String clave, String nombre,
+    public Hotel(String nombreUsuario, String clave, String nombre,
                  Ciudad ciudad, String direccion, int capacidad, int categoria) {
-        super(id, nombreUsuario, clave, nombre, ciudad, direccion, capacidad);
+        super(nombreUsuario, clave, nombre, ciudad, direccion, capacidad);
         setCategoria(categoria);
     }
 

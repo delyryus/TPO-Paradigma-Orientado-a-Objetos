@@ -8,26 +8,16 @@ import java.time.LocalTime;
  */
 public class Evento {
 
-    private int id;
     private LocalDate fecha;
     private LocalTime horario;
     private String actividad;
     private Ciudad ciudad;
 
-    public Evento(int id, LocalDate fecha, LocalTime horario, String actividad, Ciudad ciudad) {
-        this.id = id;
+    public Evento(LocalDate fecha, LocalTime horario, String actividad, Ciudad ciudad) {
         setFecha(fecha);
         setHorario(horario);
         setActividad(actividad);
         setCiudad(ciudad);
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
     }
 
     public LocalDate getFecha() {

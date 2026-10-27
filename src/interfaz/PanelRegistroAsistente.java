@@ -56,7 +56,7 @@ public class PanelRegistroAsistente extends JPanel {
                 return;
             }
 
-            Asistente asistente = new Asistente(0, nombreUsuario, clave, nombre, dni, origen);
+            Asistente asistente = new Asistente(nombreUsuario, clave, nombre, dni, origen);
             ventana.getGestorUsuarios().registrarAsistente(asistente);
             UtilidadesInterfaz.mostrarInfo(this, "Asistente registrado correctamente.");
             ventana.mostrarMenuPrincipal();

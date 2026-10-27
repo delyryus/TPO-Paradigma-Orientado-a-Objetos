@@ -2,29 +2,19 @@ package modelo;
 
 /**
  * Representa una cuenta del sistema. Es una clase abstracta porque nunca se
- * crean usuarios "genéricos": toda cuenta es un asistente, un administrador o
+ * crean usuarios "genericos": toda cuenta es un asistente, un administrador o
  * un alojamiento (que a su vez puede ser parroquia, hotel o espacio de organizacion).
  */
 public abstract class Usuario {
 
-    private int id;
-    private String nombreUsuario;
-    private String clave;
-    private String nombre;
+    protected String nombre;
+    protected String clave;
+    protected String nombreUsuario;
 
-    public Usuario(int id, String nombreUsuario, String clave, String nombre) {
-        this.id = id;
+    public Usuario(String nombreUsuario, String clave, String nombre) {
         this.nombreUsuario = nombreUsuario;
         this.clave = clave;
         this.nombre = nombre;
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
     }
 
     public String getNombreUsuario() {

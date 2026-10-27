@@ -3,50 +3,31 @@ package modelo;
 import java.time.LocalDate;
 
 /**
- * Reserva de un alojamiento hecha por un asistente. Guarda identificadores en
- * lugar de los objetos completos para evitar duplicar informacion.
+ * Reserva de un alojamiento hecha por un asistente. Guarda una referencia
+ * directa al asistente; el alojamiento es quien mantiene la coleccion de
+ * reservas, tal como indica el UML.
  */
 public class Reserva {
 
-    private int id;
-    private int idAsistente;
-    private int idAlojamiento;
+    private Asistente asistente;
     private LocalDate ingreso;
     private LocalDate egreso;
     private EstadoReserva estado;
 
-    public Reserva(int id, int idAsistente, int idAlojamiento,
-                   LocalDate ingreso, LocalDate egreso, EstadoReserva estado) {
-        this.id = id;
-        this.idAsistente = idAsistente;
-        this.idAlojamiento = idAlojamiento;
+    public Reserva(Asistente asistente, LocalDate ingreso, LocalDate egreso,
+                   EstadoReserva estado) {
+        this.asistente = asistente;
         setIngreso(ingreso);
         setEgreso(egreso);
         this.estado = estado;
     }
 
-    public int getId() {
-        return id;
+    public Asistente getAsistente() {
+        return asistente;
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public int getIdAsistente() {
-        return idAsistente;
-    }
-
-    public void setIdAsistente(int idAsistente) {
-        this.idAsistente = idAsistente;
-    }
-
-    public int getIdAlojamiento() {
-        return idAlojamiento;
-    }
-
-    public void setIdAlojamiento(int idAlojamiento) {
-        this.idAlojamiento = idAlojamiento;
+    public void setAsistente(Asistente asistente) {
+        this.asistente = asistente;
     }
 
     public LocalDate getIngreso() {
@@ -86,12 +67,12 @@ public class Reserva {
     }
 
     /**
-     * Determina si dos reservas se superponen en el tiempo. El ingreso es
-     * inclusivo y el egreso es exclusivo: si una reserva termina el mismo dia
-     * en que empieza la otra, no se consideran superpuestas.
+     * Determina si esta reserva se superpone con el periodo indicado. El
+     * ingreso es inclusivo y el egreso es exclusivo: si una reserva termina el
+     * mismo dia en que empieza la otra, no se consideran superpuestas.
      */
-    public boolean seSuperpone(Reserva otra) {
-        return this.ingreso.isBefore(otra.egreso) && otra.ingreso.isBefore(this.egreso);
+    public boolean seSuperpone(LocalDate otroIngreso, LocalDate otroEgreso) {
+        return this.ingreso.isBefore(otroEgreso) && otroIngreso.isBefore(this.egreso);
     }
 
     /**

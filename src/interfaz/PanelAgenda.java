@@ -6,6 +6,8 @@ import modelo.Evento;
 import javax.swing.*;
 import java.awt.*;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -94,7 +96,7 @@ public class PanelAgenda extends JPanel {
     private void cargarPorFecha() {
         try {
             LocalDate fecha = UtilidadesInterfaz.leerFecha(campoFecha.getText());
-            eventosMostrados = ventana.getGestorEventos().listarPorFecha(fecha);
+            eventosMostrados = ventana.getGestorEventos().agendaPorFecha(fecha);
             mostrarTabla();
         } catch (Exception ex) {
             UtilidadesInterfaz.mostrarError(this, ex.getMessage());
@@ -103,24 +105,18 @@ public class PanelAgenda extends JPanel {
 
     private void cargarInscripciones() {
         Asistente asistente = (Asistente) ventana.getSesion();
-        eventosMostrados = new java.util.ArrayList<>();
-        for (int idEvento : asistente.getEventos()) {
-            Evento evento = ventana.getGestorEventos().buscarPorId(idEvento);
-            if (evento != null) {
-                eventosMostrados.add(evento);
-            }
-        }
-        eventosMostrados.sort(java.util.Comparator.comparing(Evento::getFecha)
+        eventosMostrados = new ArrayList<>(asistente.getEventos());
+        eventosMostrados.sort(Comparator.comparing(Evento::getFecha)
                 .thenComparing(Evento::getHorario));
         mostrarTabla();
     }
 
     private void mostrarTabla() {
-        String[] columnas = {"Id", "Fecha", "Horario", "Actividad", "Ciudad"};
-        Object[][] filas = new Object[eventosMostrados.size()][5];
+        String[] columnas = {"Fecha", "Horario", "Actividad", "Ciudad"};
+        Object[][] filas = new Object[eventosMostrados.size()][4];
         for (int i = 0; i < eventosMostrados.size(); i++) {
             Evento e = eventosMostrados.get(i);
-            filas[i] = new Object[]{e.getId(), e.getFecha(), e.getHorario(), e.getActividad(), e.getCiudad()};
+            filas[i] = new Object[]{e.getFecha(), e.getHorario(), e.getActividad(), e.getCiudad()};
         }
         tabla.setModel(UtilidadesInterfaz.modeloTabla(columnas, filas));
     }
@@ -140,7 +136,7 @@ public class PanelAgenda extends JPanel {
             return;
         }
         try {
-            ventana.getGestorEventos().inscribir((Asistente) ventana.getSesion(), evento.getId());
+            ventana.getGestorEventos().inscribir((Asistente) ventana.getSesion(), evento);
             UtilidadesInterfaz.mostrarInfo(this, "Te inscribiste al evento \"" + evento.getActividad() + "\".");
         } catch (Exception ex) {
             UtilidadesInterfaz.mostrarError(this, ex.getMessage());
@@ -153,7 +149,7 @@ public class PanelAgenda extends JPanel {
             return;
         }
         try {
-            ventana.getGestorEventos().desinscribir((Asistente) ventana.getSesion(), evento.getId());
+            ventana.getGestorEventos().desinscribir((Asistente) ventana.getSesion(), evento);
             UtilidadesInterfaz.mostrarInfo(this, "Te desinscribiste del evento \"" + evento.getActividad() + "\".");
             cargarInscripciones();
         } catch (Exception ex) {

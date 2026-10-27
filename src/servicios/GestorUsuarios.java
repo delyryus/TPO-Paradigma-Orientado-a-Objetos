@@ -8,7 +8,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Gestiona el registro, la autenticacion y la busqueda de cuentas.
+ * Gestiona el registro, la autenticacion y la busqueda de cuentas. La
+ * identidad de una cuenta es su nombre de usuario, que es unico.
  */
 public class GestorUsuarios {
 
@@ -49,14 +50,32 @@ public class GestorUsuarios {
         return null;
     }
 
+    public Usuario buscar(String nombreUsuario) {
+        for (Usuario u : usuarios) {
+            if (u.getNombreUsuario().equals(nombreUsuario)) {
+                return u;
+            }
+        }
+        return null;
+    }
+
+    public Asistente buscarAsistente(String nombreUsuario) {
+        Usuario u = buscar(nombreUsuario);
+        return (u instanceof Asistente) ? (Asistente) u : null;
+    }
+
+    public Alojamiento buscarAlojamiento(String nombreUsuario) {
+        Usuario u = buscar(nombreUsuario);
+        return (u instanceof Alojamiento) ? (Alojamiento) u : null;
+    }
+
     /**
-     * Registra un asistente nuevo. Asigna el id y guarda en disco.
+     * Registra un asistente nuevo y guarda en disco.
      */
     public Asistente registrarAsistente(Asistente asistente) {
         if (existeNombreUsuario(asistente.getNombreUsuario())) {
             throw new IllegalArgumentException("El nombre de usuario ya esta en uso.");
         }
-        asistente.setId(proximoId());
         usuarios.add(asistente);
         guardarCuentas();
         return asistente;
@@ -69,29 +88,9 @@ public class GestorUsuarios {
         if (existeNombreUsuario(alojamiento.getNombreUsuario())) {
             throw new IllegalArgumentException("El nombre de usuario ya esta en uso.");
         }
-        alojamiento.setId(proximoId());
         usuarios.add(alojamiento);
         guardarCuentas();
         return alojamiento;
-    }
-
-    public Usuario buscarPorId(int id) {
-        for (Usuario u : usuarios) {
-            if (u.getId() == id) {
-                return u;
-            }
-        }
-        return null;
-    }
-
-    public Asistente buscarAsistente(int id) {
-        Usuario u = buscarPorId(id);
-        return (u instanceof Asistente) ? (Asistente) u : null;
-    }
-
-    public Alojamiento buscarAlojamiento(int id) {
-        Usuario u = buscarPorId(id);
-        return (u instanceof Alojamiento) ? (Alojamiento) u : null;
     }
 
     public List<Alojamiento> listarAlojamientos() {
@@ -114,17 +113,7 @@ public class GestorUsuarios {
         return resultado;
     }
 
-    private int proximoId() {
-        int maximo = 0;
-        for (Usuario u : usuarios) {
-            if (u.getId() > maximo) {
-                maximo = u.getId();
-            }
-        }
-        return maximo + 1;
-    }
-
-    private void guardarCuentas() {
+    public void guardarCuentas() {
         try {
             persistencia.guardarCuentas(usuarios);
         } catch (IOException e) {

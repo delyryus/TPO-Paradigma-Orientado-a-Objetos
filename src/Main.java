@@ -1,6 +1,5 @@
 import interfaz.VentanaPrincipal;
 import modelo.Evento;
-import modelo.Reserva;
 import modelo.Usuario;
 import persistencia.PersistenciaJSON;
 import servicios.GestorAlojamientos;
@@ -21,13 +20,13 @@ public class Main {
         PersistenciaJSON persistencia = new PersistenciaJSON();
 
         try {
-            List<Usuario> usuarios = persistencia.cargarCuentas();
             List<Evento> eventos = persistencia.cargarEventos();
-            List<Reserva> reservas = persistencia.cargarReservas();
+            List<Usuario> usuarios = persistencia.cargarCuentas(eventos);
+            persistencia.cargarReservas(usuarios);
 
             GestorUsuarios gestorUsuarios = new GestorUsuarios(usuarios, persistencia);
             GestorEventos gestorEventos = new GestorEventos(eventos, gestorUsuarios, persistencia);
-            GestorReservas gestorReservas = new GestorReservas(reservas, gestorUsuarios, persistencia);
+            GestorReservas gestorReservas = new GestorReservas(gestorUsuarios, persistencia);
             GestorAlojamientos gestorAlojamientos = new GestorAlojamientos(gestorUsuarios, gestorReservas, persistencia);
 
             SwingUtilities.invokeLater(() -> new VentanaPrincipal(

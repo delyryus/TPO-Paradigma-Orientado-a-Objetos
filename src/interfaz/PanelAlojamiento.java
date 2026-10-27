@@ -75,7 +75,7 @@ public class PanelAlojamiento extends JPanel {
 
         try {
             ventana.getGestorAlojamientos().modificarDatos(
-                    alojamiento.getId(), alojamiento.getId(), campoNombre.getText(),
+                    alojamiento, campoNombre.getText(),
                     (modelo.Ciudad) comboCiudad.getSelectedItem(), campoDireccion.getText());
             UtilidadesInterfaz.mostrarInfo(this, "Datos actualizados correctamente.");
             ventana.mostrarMenuAlojamiento();
@@ -99,8 +99,7 @@ public class PanelAlojamiento extends JPanel {
 
         try {
             int capacidad = Integer.parseInt(campoCapacidad.getText().trim());
-            ventana.getGestorAlojamientos().modificarCapacidad(
-                    alojamiento.getId(), alojamiento.getId(), capacidad);
+            ventana.getGestorAlojamientos().modificarCapacidad(alojamiento, capacidad);
             UtilidadesInterfaz.mostrarInfo(this, "Capacidad actualizada correctamente.");
             ventana.mostrarMenuAlojamiento();
         } catch (NumberFormatException ex) {
@@ -135,14 +134,13 @@ public class PanelAlojamiento extends JPanel {
             }
 
             List<Reserva> huespedes = ventana.getGestorAlojamientos()
-                    .huespedesEnPeriodo(alojamiento.getId(), desde, hasta);
+                    .huespedesEnPeriodo(alojamiento, desde, hasta);
 
-            String[] columnas = {"Reserva", "Asistente", "Ingreso", "Egreso"};
-            Object[][] filas = new Object[huespedes.size()][4];
+            String[] columnas = {"Asistente", "Ingreso", "Egreso"};
+            Object[][] filas = new Object[huespedes.size()][3];
             for (int i = 0; i < huespedes.size(); i++) {
                 Reserva r = huespedes.get(i);
-                String nombreAsistente = String.valueOf(ventana.getGestorUsuarios().buscarPorId(r.getIdAsistente()).getNombre());
-                filas[i] = new Object[]{r.getId(), nombreAsistente, r.getIngreso(), r.getEgreso()};
+                filas[i] = new Object[]{r.getAsistente().getNombre(), r.getIngreso(), r.getEgreso()};
             }
 
             JTable tabla = new JTable(UtilidadesInterfaz.modeloTabla(columnas, filas));

@@ -1,10 +1,11 @@
 package interfaz;
 
 import modelo.Ciudad;
+import modelo.Evento;
 
 import javax.swing.*;
 import java.awt.*;
-import java.time.LocalTime;
+import java.util.List;
 
 /**
  * Menu del administrador. Permite registrar, modificar y consultar eventos.
@@ -34,14 +35,12 @@ public class PanelAdministrador extends JPanel {
     }
 
     private void registrarEvento() {
-        JTextField campoId = new JTextField("", 10);
         JTextField campoFecha = new JTextField("2026-11-08", 12);
         JTextField campoHorario = new JTextField("10:00", 12);
         JTextField campoActividad = new JTextField("", 20);
         JComboBox<Ciudad> comboCiudad = new JComboBox<>(Ciudad.values());
 
         JPanel form = UtilidadesInterfaz.formulario(
-                UtilidadesInterfaz.fila("Id (numero):", campoId),
                 UtilidadesInterfaz.fila("Fecha (AAAA-MM-DD):", campoFecha),
                 UtilidadesInterfaz.fila("Horario (HH:mm):", campoHorario),
                 UtilidadesInterfaz.fila("Actividad:", campoActividad),
@@ -55,25 +54,31 @@ public class PanelAdministrador extends JPanel {
         }
 
         try {
-            int id = Integer.parseInt(campoId.getText().trim());
-            modelo.Evento evento = new modelo.Evento(id,
+            ventana.getGestorEventos().registrar(
                     UtilidadesInterfaz.leerFecha(campoFecha.getText()),
                     UtilidadesInterfaz.leerHora(campoHorario.getText()),
                     campoActividad.getText(),
                     (Ciudad) comboCiudad.getSelectedItem());
-            ventana.getGestorEventos().registrarEvento(evento);
             UtilidadesInterfaz.mostrarInfo(this, "Evento registrado correctamente.");
-        } catch (NumberFormatException ex) {
-            UtilidadesInterfaz.mostrarError(this, "El id debe ser un numero entero.");
         } catch (Exception ex) {
             UtilidadesInterfaz.mostrarError(this, ex.getMessage());
         }
     }
 
     private void modificarEvento() {
-        JTextField campoId = new JTextField("", 10);
+        List<Evento> eventos = ventana.getGestorEventos().listarTodosOrdenados();
+        if (eventos.isEmpty()) {
+            UtilidadesInterfaz.mostrarInfo(this, "No hay eventos registrados para modificar.");
+            return;
+        }
+
+        JComboBox<String> comboEventos = new JComboBox<>();
+        for (Evento e : eventos) {
+            comboEventos.addItem(etiquetaEvento(e));
+        }
+
         JPanel formId = UtilidadesInterfaz.formulario(
-                UtilidadesInterfaz.fila("Id del evento:", campoId)
+                UtilidadesInterfaz.fila("Evento:", comboEventos)
         );
         int opcionId = JOptionPane.showConfirmDialog(this, formId, "Modificar evento - paso 1",
                 JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
@@ -81,19 +86,7 @@ public class PanelAdministrador extends JPanel {
             return;
         }
 
-        int id;
-        try {
-            id = Integer.parseInt(campoId.getText().trim());
-        } catch (NumberFormatException ex) {
-            UtilidadesInterfaz.mostrarError(this, "El id debe ser un numero entero.");
-            return;
-        }
-
-        modelo.Evento evento = ventana.getGestorEventos().buscarPorId(id);
-        if (evento == null) {
-            UtilidadesInterfaz.mostrarError(this, "No existe un evento con id " + id + ".");
-            return;
-        }
+        Evento evento = eventos.get(comboEventos.getSelectedIndex());
 
         JTextField campoFecha = new JTextField(evento.getFecha().toString(), 12);
         JTextField campoHorario = new JTextField(evento.getHorario().toString(), 12);
@@ -115,7 +108,7 @@ public class PanelAdministrador extends JPanel {
         }
 
         try {
-            ventana.getGestorEventos().modificarEvento(id,
+            ventana.getGestorEventos().modificarEvento(evento,
                     UtilidadesInterfaz.leerFecha(campoFecha.getText()),
                     UtilidadesInterfaz.leerHora(campoHorario.getText()),
                     campoActividad.getText(),
@@ -124,6 +117,11 @@ public class PanelAdministrador extends JPanel {
         } catch (Exception ex) {
             UtilidadesInterfaz.mostrarError(this, ex.getMessage());
         }
+    }
+
+    private String etiquetaEvento(Evento evento) {
+        return evento.getFecha() + " " + evento.getHorario() + " - "
+                + evento.getActividad() + " (" + evento.getCiudad() + ")";
     }
 
     private JButton botonCentrado(String texto, java.awt.event.ActionListener accion) {

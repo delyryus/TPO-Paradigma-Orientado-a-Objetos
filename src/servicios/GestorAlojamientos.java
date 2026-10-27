@@ -26,17 +26,12 @@ public class GestorAlojamientos {
     }
 
     /**
-     * Modifica los datos propios de un alojamiento. El parametro "idSesion" es
-     * el id de la cuenta autenticada, para garantizar que solo modifique sus datos.
+     * Modifica los datos propios del alojamiento autenticado.
      */
-    public void modificarDatos(int idSesion, int idAlojamiento, String nombre,
+    public void modificarDatos(Alojamiento alojamiento, String nombre,
                                Ciudad ciudad, String direccion) {
-        Alojamiento alojamiento = gestorUsuarios.buscarAlojamiento(idAlojamiento);
-        if (alojamiento == null) {
+        if (alojamiento == null || !gestorUsuarios.getUsuarios().contains(alojamiento)) {
             throw new IllegalArgumentException("El alojamiento no existe.");
-        }
-        if (idSesion != idAlojamiento) {
-            throw new IllegalArgumentException("Solo podes modificar tus propios datos.");
         }
         if (nombre == null || nombre.trim().isEmpty()) {
             throw new IllegalArgumentException("El nombre es obligatorio.");
@@ -54,18 +49,14 @@ public class GestorAlojamientos {
      * Modifica la capacidad de un alojamiento, impidiendo que quede por debajo
      * de la ocupacion existente por reservas activas.
      */
-    public void modificarCapacidad(int idSesion, int idAlojamiento, int nuevaCapacidad) {
-        Alojamiento alojamiento = gestorUsuarios.buscarAlojamiento(idAlojamiento);
-        if (alojamiento == null) {
+    public void modificarCapacidad(Alojamiento alojamiento, int nuevaCapacidad) {
+        if (alojamiento == null || !gestorUsuarios.getUsuarios().contains(alojamiento)) {
             throw new IllegalArgumentException("El alojamiento no existe.");
-        }
-        if (idSesion != idAlojamiento) {
-            throw new IllegalArgumentException("Solo podes modificar tus propios datos.");
         }
         if (nuevaCapacidad <= 0) {
             throw new IllegalArgumentException("La capacidad debe ser un numero positivo.");
         }
-        int ocupacionMaxima = gestorReservas.ocupacionMaxima(idAlojamiento);
+        int ocupacionMaxima = gestorReservas.ocupacionMaxima(alojamiento);
         if (nuevaCapacidad < ocupacionMaxima) {
             throw new IllegalArgumentException("No se puede reducir la capacidad a " + nuevaCapacidad
                     + " porque hay una ocupacion maxima de " + ocupacionMaxima + " por reservas activas.");
@@ -78,9 +69,9 @@ public class GestorAlojamientos {
      * Devuelve las reservas activas del alojamiento que se superponen con el
      * periodo indicado, para consultar los huespedes alojados.
      */
-    public List<Reserva> huespedesEnPeriodo(int idAlojamiento, LocalDate desde, LocalDate hasta) {
+    public List<Reserva> huespedesEnPeriodo(Alojamiento alojamiento, LocalDate desde, LocalDate hasta) {
         List<Reserva> resultado = new ArrayList<>();
-        for (Reserva r : gestorReservas.reservasDeAlojamiento(idAlojamiento)) {
+        for (Reserva r : gestorReservas.reservasDeAlojamiento(alojamiento)) {
             if (r.estaActiva() && r.getIngreso().isBefore(hasta) && r.getEgreso().isAfter(desde)) {
                 resultado.add(r);
             }

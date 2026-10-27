@@ -7,9 +7,9 @@ public class EspacioOrg extends Alojamiento {
 
     private String organizador;
 
-    public EspacioOrg(int id, String nombreUsuario, String clave, String nombre,
+    public EspacioOrg(String nombreUsuario, String clave, String nombre,
                       Ciudad ciudad, String direccion, int capacidad, String organizador) {
-        super(id, nombreUsuario, clave, nombre, ciudad, direccion, capacidad);
+        super(nombreUsuario, clave, nombre, ciudad, direccion, capacidad);
         this.organizador = organizador;
     }
 
